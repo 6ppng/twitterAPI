@@ -1,36 +1,67 @@
+from datetime import datetime
+from tzlocal import get_localzone
+import json
 from requests_oauthlib import OAuth1Session
 import yaml
 
-KEYS_RATH: str = './downloads/config.yaml'
+KEYS_RATH: str = './config/config.yaml'
 
 
-def get_config(path: str) -> dict:
+def get_config() -> dict:
     with open(KEYS_RATH) as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
     return config
 
 
 def get_keys() -> dict:
-    return get_config(KEYS_RATH)['keys']
+    return get_config()['keys']
 
 
-def post(tweet: str) -> int:
+def post(tweet: str) -> None:
     keys = get_keys()
     url = "https://api.twitter.com/1.1/statuses/update.json"
     params = {"status": tweet}
-    twitter = OAuth1Session(
-        keys['CK'],
-        keys['CS'],
-        keys['AT'],
-        keys['AS'])
+    with OAuth1Session(
+            keys['CK'],
+            keys['CS'],
+            keys['AT'],
+            keys['AS']) as twitter:
+        req = twitter.post(url, params=params)
 
-    req = twitter.post(url, params=params)
+    if req.status_code != 200:
+        print(f'error : {req.status_code}')
 
-    return req.status_code
+
+def reload_timeline() -> None:
+    keys = get_keys()
+    url = "https://api.twitter.com/1.1/statuses/home_timeline.json"
+    params = {'counts': 100}
+    with OAuth1Session(
+            keys['CK'],
+            keys['CS'],
+            keys['AT'],
+            keys['AS']) as twitter:
+        req = twitter.get(url, params=params)
+
+    if req.status_code == 200:
+        timeline = json.loads(req.text)
+        for tweet in timeline[::-1]:
+            time = datetime.strptime(
+                tweet['created_at'],
+                '%a %b %d %I:%M:%S %z %Y')
+            time = time.astimezone(tz=get_localzone())
+            print(
+                tweet['user']['screen_name'] +
+                ' :: ' +
+                time.strftime('%H:%M:%S'))
+            print(tweet['text'])
+            print('___')
+    else:
+        print(f'error : {req.status_code}')
 
 
 def main() -> None:
-    post('neyo')
+    reload_timeline()
 
 
 if __name__ == '__main__':
