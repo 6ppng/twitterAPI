@@ -29,9 +29,17 @@ def post(tweet: str) -> None:
         print(f'error : {req.status_code}')
 
 
-def reload_timeline() -> None:
+def get_resource(timeline: str) -> str:
+    if timeline == 'home':
+        return 'https://api.twitter.com/1.1/statuses/home_timeline.json'
+    list_id = get_config()['list_ids'][timeline]
+    return 'https://api.twitter.com/1.1/lists/statuses.json' + \
+        f'?list_id={list_id}'
+
+
+def reload_timeline(timeline: str = 'home') -> None:
     keys = get_keys()
-    url = "https://api.twitter.com/1.1/statuses/home_timeline.json"
+    url = get_resource(timeline)
     params = {'counts': 100}
     with OAuth1Session(
             keys['CK'], keys['CS'], keys['AT'], keys['AS']) as twitter:
