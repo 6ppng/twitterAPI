@@ -22,10 +22,7 @@ def post(tweet: str) -> None:
     url = "https://api.twitter.com/1.1/statuses/update.json"
     params = {"status": tweet}
     with OAuth1Session(
-            keys['CK'],
-            keys['CS'],
-            keys['AT'],
-            keys['AS']) as twitter:
+            keys['CK'], keys['CS'], keys['AT'], keys['AS']) as twitter:
         req = twitter.post(url, params=params)
 
     if req.status_code != 200:
@@ -37,23 +34,17 @@ def reload_timeline() -> None:
     url = "https://api.twitter.com/1.1/statuses/home_timeline.json"
     params = {'counts': 100}
     with OAuth1Session(
-            keys['CK'],
-            keys['CS'],
-            keys['AT'],
-            keys['AS']) as twitter:
+            keys['CK'], keys['CS'], keys['AT'], keys['AS']) as twitter:
         req = twitter.get(url, params=params)
 
     if req.status_code == 200:
         timeline = json.loads(req.text)
         for tweet in timeline[::-1]:
             time = datetime.strptime(
-                tweet['created_at'],
-                '%a %b %d %I:%M:%S %z %Y')
+                tweet['created_at'], '%a %b %d %I:%M:%S %z %Y')
             time = time.astimezone(tz=get_localzone())
-            print(
-                tweet['user']['screen_name'] +
-                ' :: ' +
-                time.strftime('%H:%M:%S'))
+            print(tweet['user']['screen_name'], end=' :: ')
+            print(time.strftime('%H:%M:%S'))
             print(tweet['text'])
             print('___')
     else:
