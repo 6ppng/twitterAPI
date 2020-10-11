@@ -4,22 +4,25 @@ import json
 from requests_oauthlib import OAuth1Session
 import yaml
 
-KEYS_RATH: str = './config/config.yaml'
+CONFIG_RATH: str = './config/config.yaml'
+RESOURCE_PATH: str = 'resources.yaml'
 
 
-def get_config() -> dict:
-    with open(KEYS_RATH) as f:
+def _get_config() -> dict:
+    with open(CONFIG_RATH) as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
     return config
 
 
-def get_keys() -> dict:
-    return get_config()['keys']
+def _get_resources() -> dict:
+    with open(RESOURCE_PATH) as f:
+        resource = yaml.load(f, Loader=yaml.SafeLoader)
+    return resource
 
 
 def post(tweet: str) -> None:
-    keys = get_keys()
-    url = "https://api.twitter.com/1.1/statuses/update.json"
+    keys = _get_config()['keys']
+    url = _get_resources()['post']
     params = {"status": tweet}
     with OAuth1Session(
             keys['CK'], keys['CS'], keys['AT'], keys['AS']) as twitter:
@@ -29,23 +32,26 @@ def post(tweet: str) -> None:
         print(f'error : {req.status_code}')
 
 
-def get_resource(timeline_name: str) -> str:
-    if timeline_name == 'home':
-        return 'https://api.twitter.com/1.1/statuses/home_timeline.json'
-    try:
-        list_id = get_config()['list_ids'][timeline_name]
-    except KeyError:
-        raise KeyError(f'リスト「{timeline_name}」のIDが設定されていません')
+def get_timeline(target: str, param: str) -> list:
 
-    return 'https://api.twitter.com/1.1/lists/statuses.json' + \
-        f'?list_id={list_id}'
+    keys = _get_config()['keys']
+    url = _get_resources()['tl'][target]
 
+    params = {
+        'counts': 5
+    }
 
-def get_timeline(timeline_name: str) -> list:
+    if target == 'list':
+        try:
+            list_id = _get_config()['list_ids'][param]
+        except KeyError:
+            raise KeyError(f'リスト「{param}」のIDが設定されていません')
+        params.update({'list_id': list_id})
+    elif target == 'user':
+        params.update({'screen_name': param})
+    elif target == 'search':
+        params.update({'q': param})
 
-    keys = get_keys()
-    url = get_resource(timeline_name)
-    params = {'counts': 100}
     with OAuth1Session(
             keys['CK'], keys['CS'], keys['AT'], keys['AS']) as twitter:
         req = twitter.get(url, params=params)
@@ -57,7 +63,7 @@ def get_timeline(timeline_name: str) -> list:
     return None
 
 
-def draw_timeline(timeline: list) -> None:
+def _draw_timeline(timeline: list) -> None:
 
     jp = get_localzone()
     now = datetime.now().astimezone(tz=jp)
@@ -96,7 +102,7 @@ def draw_timeline(timeline: list) -> None:
         print(f'{time_view} ({pass_view})', end=' ')
         if tweet['text'][:2] == 'RT':
             print('RT>>')
-            draw_timeline([tweet['retweeted_status']])
+            _draw_timeline([tweet['retweeted_status']])
         else:
             if retweet != 0:
                 print(f'RT:{retweet}', end=' ')
@@ -106,14 +112,16 @@ def draw_timeline(timeline: list) -> None:
             print(tweet['text'].replace('\n', ' '), end=2 * '\n')
 
 
-def reload(timeline_name: str = 'home') -> None:
-    timeline = get_timeline(timeline_name)
+def load(target: str = 'home', param: str = None) -> None:
+    timeline = get_timeline(target, param)
     if timeline is not None:
-        draw_timeline(timeline)
+        if target == 'search':
+            timeline = timeline['statuses']
+        _draw_timeline(timeline)
 
 
 def main() -> None:
-    reload()
+    load()
 
 
 if __name__ == '__main__':
