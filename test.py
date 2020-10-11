@@ -32,7 +32,11 @@ def post(tweet: str) -> None:
 def get_resource(timeline_name: str) -> str:
     if timeline_name == 'home':
         return 'https://api.twitter.com/1.1/statuses/home_timeline.json'
-    list_id = get_config()['list_ids'][timeline_name]
+    try:
+        list_id = get_config()['list_ids'][timeline_name]
+    except KeyError:
+        raise KeyError(f'リスト「{timeline_name}」のIDが設定されていません')
+
     return 'https://api.twitter.com/1.1/lists/statuses.json' + \
         f'?list_id={list_id}'
 
@@ -64,28 +68,42 @@ def draw_timeline(timeline: list) -> None:
             tweet['created_at'], '%a %b %d %H:%M:%S %z %Y').astimezone(tz=jp)
 
         pass_time = now - time
-        if pass_time < timedelta(hours=1):
-            time_view = time.strftime('%M:%S')
+        pass_sec = int(pass_time.total_seconds())
+        pass_min = pass_sec // 60
+        pass_hour = pass_min // 60
+        pass_days = pass_hour // 24
+        pass_hour %= 24
+        pass_min %= 60
+        pass_sec %= 60
+
+        if pass_time < timedelta(minutes=1):
+            time_view = 'now'
+            pass_view = f'{pass_sec}"'
+        elif pass_time < timedelta(hours=1):
+            time_view = time.strftime('%H:%M')
+            pass_view = f'{pass_min}\'{pass_sec}"'
         elif pass_time < timedelta(days=1):
-            time_view = time.strftime('%H:%M:%S')
+            time_view = time.strftime('%H:%M')
+            pass_view = f'{pass_hour}°{pass_min}\''
         else:
-            time_view = time.strftime('%m/%d %H:%M:%S')
+            time_view = time.strftime('%m/%d %H:%M')
+            pass_view = f'{pass_days}d{pass_hour}°'
 
-        if tweet['text'][:2] == 'RT':
-            fav = tweet['retweeted_status']['favorite_count']
-        else:
-            fav = tweet['favorite_count']
-
+        fav = tweet['favorite_count']
         retweet = tweet["retweet_count"]
 
-        print(tweet['user']['screen_name'][:5], end=' ')
-        print(time_view, end=' : ')
-        print(tweet['text'].replace('\n', ' '), end='')
-        if fav != 0:
-            print(f' fav:{fav}', end='')
-        if retweet != 0:
-            print(f' RT:{retweet}', end='')
-        print()
+        print(tweet['user']['screen_name'], end=' ')
+        print(f'{time_view} ({pass_view})', end=' ')
+        if tweet['text'][:2] == 'RT':
+            print('RT>>')
+            draw_timeline([tweet['retweeted_status']])
+        else:
+            if retweet != 0:
+                print(f'RT:{retweet}', end=' ')
+            if fav != 0:
+                print(f'fav:{fav}', end=' ')
+            print(':')
+            print(tweet['text'].replace('\n', ' '), end=2 * '\n')
 
 
 def reload(timeline_name: str = 'home') -> None:
@@ -95,7 +113,7 @@ def reload(timeline_name: str = 'home') -> None:
 
 
 def main() -> None:
-    reload('friends')
+    reload()
 
 
 if __name__ == '__main__':
