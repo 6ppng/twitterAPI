@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from tzlocal import get_localzone
 import json
+import os
 from requests_oauthlib import OAuth1Session
 import yaml
 
-CONFIG_RATH: str = './config/config.yaml'
-RESOURCE_PATH: str = 'resources.yaml'
+CONFIG_RATH: str = os.path.dirname() + '/config/config.yaml'
+RESOURCE_PATH: str = os.path.dirname() + '/resources.yaml'
 
 
 def _get_config() -> dict:
