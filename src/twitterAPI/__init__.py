@@ -5,8 +5,8 @@ import os
 from requests_oauthlib import OAuth1Session
 import yaml
 
-CONFIG_RATH: str = os.path.dirname() + '/config/config.yaml'
-RESOURCE_PATH: str = os.path.dirname() + '/resources.yaml'
+CONFIG_RATH: str = os.path.dirname(__file__) + '/config/config.yaml'
+RESOURCE_PATH: str = os.path.dirname(__file__) + '/resources.yaml'
 
 
 def _get_config() -> dict:
